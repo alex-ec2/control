@@ -1,0 +1,39 @@
+#!/bin/bash
+
+WHITELIST="-g sg-d8b1c1bd"
+INTERNALLIST="-g sg-9a5be0ff -g sg-5c4bf039"
+
+if [ $# -lt 1 ]
+	then
+		echo "Usage : $0 [on|off|status]"
+		exit
+	fi
+
+INSTANCE="`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || echo \"wget instance-id has failed: $?\"`"
+
+COMMAND="$1"
+case "$COMMAND" in
+	on )
+	echo "attempting to enable public access..."
+	ACCESS="$WHITELIST $INTERNALLIST"
+	ID=$(ec2-modify-instance-attribute $INSTANCE $ACCESS)
+	;;
+	off )
+	echo "attempting to disable public access..."
+	ACCESS="$INTERNALLIST"
+	ID=$(ec2-modify-instance-attribute $INSTANCE $ACCESS)
+	;;
+	status )
+	echo "obtaining system status..."
+	ID=$(ec2-describe-instance-status $INSTANCE )
+	echo "$ID"
+	;;
+	* ) echo "invalid argrument(s)"
+	;;
+esac
+
+echo "${0} ${COMMAND} : ${ID}" >> ~/log/whitelist.log
+RESULT=`echo $ID | grep $INSTANCE`
+
+[ ! -z "$ID" ] && echo "SUCCESS"
+[ -z "$ID" ] && echo "FAILED"
